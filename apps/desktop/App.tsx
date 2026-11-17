@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 22409)
-Total output lines: 2251
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowDownToLine,
@@ -698,7 +695,1020 @@ export default function App() {
                 >
                   <CheckCheck size={15} />
                   {verification[receipt.id].valid
-                    ? `Independently verified ${verification[receipt.id].fil…10409 tokens truncated…               onChange={changeSnapshot}
+                    ? `Independently verified ${verification[receipt.id].files} files / ${bytes(verification[receipt.id].bytes)}`
+                    : `Verification failed: ${verification[receipt.id].errors.join("; ")}`}
+                </div>
+              )}
+            </div>
+            <div className="receipt-actions">
+              <button
+                className="button small-button"
+                disabled={isBusy}
+                onClick={() =>
+                  void query<Verification>(
+                    "Verifying restored output",
+                    { action: "verify", id: receipt.id },
+                    (v) =>
+                      setVerification((old) => ({ ...old, [receipt.id]: v })),
+                  )
+                }
+              >
+                <ShieldCheck size={14} />
+                Verify output
+              </button>
+              <button
+                className="text-button"
+                disabled={isBusy}
+                onClick={() =>
+                  void bridge
+                    .openOutput(receipt.id)
+                    .catch((e) => setError(String(e)))
+                }
+              >
+                <FolderOpen size={14} />
+                Open folder
+              </button>
+            </div>
+          </article>
+        ))
+      ) : (
+        <Empty icon={FileCheck2} title="No recovery receipts yet">
+          A completed restore writes a machine-readable receipt after publishing
+          and verifying its files.
+        </Empty>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <a
+          className="brand"
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate("overview");
+          }}
+          aria-label="REWIND home"
+        >
+          <span className="brand-mark">
+            <RotateCcw size={22} strokeWidth={2.6} />
+          </span>
+          <span>
+            REWIND<span className="brand-period">.</span>
+          </span>
+        </a>
+        <div className="sidebar-caption">RECOVERY, WITH EVIDENCE.</div>
+        <nav aria-label="Main navigation">
+          {nav.map((item, i) => (
+            <button
+              key={item.id}
+              aria-label={item.label}
+              title={item.label}
+              className={`nav-item ${screen === item.id ? "active" : ""}`}
+              disabled={!data?.ready || (isBusy && connecting)}
+              onClick={() => navigate(item.id)}
+            >
+              <item.icon size={17} strokeWidth={1.65} />
+              <span>{item.label}</span>
+              <span className="nav-index">0{i + 1}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-bottom">
+          <div className="local-indicator">
+            <span />
+            LOCAL FIRST
+          </div>
+          <p>
+            Your files stay here.
+            <br />
+            No accounts. No telemetry.
+          </p>
+          <div className="version">
+            REWIND / 1.0 <span>DESKTOP</span>
+          </div>
+        </div>
+      </aside>
+      <div className="workspace">
+        <header className="topbar">
+          <div className="breadcrumb">
+            <span className="breadcrumb-root">
+              <Database size={14} />
+              Workspace
+            </span>
+            <span className="slash">/</span>
+            <strong>
+              {data?.repository
+                ? `Repository ${short(data.repository.id)}`
+                : "Getting started"}
+            </strong>
+          </div>
+          <div className="topbar-actions">
+            {data?.ready && !connecting && (
+              <>
+                <div className="scope-switch" aria-label="Repository scope">
+                  <button
+                    className={scope === "original" ? "active" : ""}
+                    disabled={isBusy}
+                    onClick={() => changeScope("original")}
+                  >
+                    Original
+                  </button>
+                  <button
+                    className={scope === "lab" ? "active" : ""}
+                    disabled={isBusy || !data.lab}
+                    title={
+                      !data.lab ? "Create a laboratory copy first" : undefined
+                    }
+                    onClick={() => changeScope("lab")}
+                  >
+                    <FlaskConical size={12} />
+                    Lab
+                  </button>
+                </div>
+                <button
+                  className="button small-button"
+                  disabled={isBusy}
+                  onClick={() =>
+                    void run("Deep verification", {
+                      action: "scan",
+                      scope,
+                      deep: true,
+                    })
+                  }
+                >
+                  <ShieldCheck size={14} />
+                  Deep scan
+                </button>
+              </>
+            )}
+            <div className="offline-badge">
+              <i />
+              Offline capable
+            </div>
+          </div>
+        </header>
+        <main>
+          {error && (
+            <div className="notice error" role="alert">
+              <TriangleAlert size={17} />
+              <div>
+                <strong>Operation needs attention</strong>
+                <p>{error}</p>
+              </div>
+              <button
+                className="icon-button"
+                aria-label="Dismiss error"
+                onClick={() => setError("")}
+              >
+                <X size={15} />
+              </button>
+            </div>
+          )}
+          {notice && (
+            <div className="notice success" role="status">
+              <Check size={16} />
+              <span>{notice}</span>
+              <button
+                className="icon-button"
+                aria-label="Dismiss notification"
+                onClick={() => setNotice("")}
+              >
+                <X size={15} />
+              </button>
+            </div>
+          )}
+          {isBusy && (
+            <div className="operation-progress" role="status">
+              <LoaderCircle size={17} className="spin" />
+              <div>
+                <strong>{busy}</strong>
+                <span>
+                  {progress?.phase}
+                  {progress?.detail ? ` · ${progress.detail}` : ""}
+                  {progress?.total
+                    ? ` · ${progress.completed}/${progress.total}`
+                    : ""}
+                </span>
+              </div>
+              {progress?.total && (
+                <progress value={progress.completed} max={progress.total} />
+              )}
+              <button className="text-button" onClick={() => void cancel()}>
+                Cancel
+              </button>
+            </div>
+          )}
+          {loading ? (
+            <div className="loading-page">
+              <LoaderCircle size={25} className="spin" />
+              <p>Opening local workspace…</p>
+            </div>
+          ) : !data?.ready || connecting ? (
+            <section className="setup-page">
+              {connecting && data?.ready && (
+                <>
+                  <button
+                    className="text-button"
+                    disabled={isBusy}
+                    onClick={() => {
+                      setConnecting(false);
+                      setError("");
+                      setNotice("");
+                    }}
+                  >
+                    <ChevronLeft size={14} />
+                    Return to current workspace
+                  </button>
+                  <div className="notice caution">
+                    <FolderOpen size={17} />
+                    <p>
+                      Your current workspace stays connected until a new setup
+                      or demo succeeds. Existing backups are preserved.
+                    </p>
+                  </div>
+                </>
+              )}
+              <div className="eyebrow">
+                YOUR FILES. YOUR HISTORY. YOUR PROOF.
+              </div>
+              <h1>
+                Know what
+                <br />
+                survived<span className="accent">.</span>
+              </h1>
+              <p className="setup-intro">
+                Incremental backups, visible dependencies, and verified
+                recovery. Build a history you can inspect.
+              </p>
+              <div className="setup-demo">
+                <div className="demo-illustration">
+                  <Database size={25} />
+                  <span />
+                  <GitBranch size={29} />
+                  <span />
+                  <ShieldCheck size={26} />
+                </div>
+                <div>
+                  <span className="eyebrow">START WITH REAL DATA</span>
+                  <h2>Take REWIND for a test run.</h2>
+                  <p>
+                    A disposable seeded workspace. Three real snapshots, two
+                    physical storage copies, and a safe disaster laboratory.
+                  </p>
+                </div>
+                <button
+                  className="button primary"
+                  disabled={isBusy || !bridge}
+                  onClick={() =>
+                    void run(
+                      "Creating demo workspace",
+                      { action: "demo" },
+                      {
+                        scope: "original",
+                        reset: true,
+                        success:
+                          "Demo workspace created with real snapshots. Open the laboratory to test recovery.",
+                      },
+                    )
+                  }
+                >
+                  Create demo workspace
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+              <div className="setup-custom">
+                <div>
+                  <span className="eyebrow">OR BRING YOUR OWN FOLDER</span>
+                  <h2>Connect a local workspace</h2>
+                  <p className="muted small">
+                    Sources are read only. Backups must be outside the source
+                    and separate from each other.
+                  </p>
+                </div>
+                <div className="setup-paths">
+                  {(
+                    [
+                      {
+                        key: "source",
+                        label: "Source folder",
+                        detail: "The files you want to protect",
+                      },
+                      {
+                        key: "a",
+                        label: "Storage A",
+                        detail: "First backup directory",
+                      },
+                      {
+                        key: "b",
+                        label: "Storage B",
+                        detail: "Second backup directory",
+                      },
+                    ] as const
+                  ).map((field) => (
+                    <label key={field.key}>
+                      <span>
+                        {field.label}
+                        <small>{field.detail}</small>
+                      </span>
+                      <button
+                        className="path-picker"
+                        disabled={isBusy || !bridge}
+                        onClick={() =>
+                          void pick((path) =>
+                            setSetup((v) => ({ ...v, [field.key]: path })),
+                          )
+                        }
+                      >
+                        <FolderOpen size={16} />
+                        <span>{setup[field.key] || "Choose folder"}</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    </label>
+                  ))}
+                </div>
+                <div className="setup-footer">
+                  <p>
+                    <TriangleAlert size={15} />
+                    Two directories on one disk do not protect against disk
+                    failure.
+                  </p>
+                  <button
+                    className="button"
+                    disabled={isBusy || !setup.source || !setup.a || !setup.b}
+                    onClick={() =>
+                      void run(
+                        "Connecting repository",
+                        {
+                          action: "setup",
+                          source: setup.source,
+                          roots: [setup.a, setup.b],
+                        },
+                        { scope: "original", reset: true },
+                      )
+                    }
+                  >
+                    Create repository
+                    <ArrowRight size={15} />
+                  </button>
+                </div>
+              </div>
+              <p className="footnote">
+                Live folder scans are not atomic filesystem snapshots.
+                Unsupported entries are reported. No encryption, cloud services,
+                or background sync.
+              </p>
+            </section>
+          ) : (
+            <>
+              {scope === "lab" && (
+                <div className="lab-banner">
+                  <FlaskConical size={17} />
+                  <strong>Simulation only</strong>
+                  <span>
+                    Original repositories untouched. You are inspecting a
+                    physically isolated copy.
+                  </span>
+                  <code>{data.lab?.id ? short(data.lab.id) : ""}</code>
+                </div>
+              )}
+              <div className="page-heading">
+                <div>
+                  <div className="eyebrow">
+                    {scope === "lab"
+                      ? "ISOLATED LABORATORY"
+                      : "LOCAL RECOVERY CONSOLE"}{" "}
+                    /{" "}
+                    {String(nav.findIndex((n) => n.id === screen) + 1).padStart(
+                      2,
+                      "0",
+                    )}
+                  </div>
+                  <h1>
+                    {screen === "overview" ? (
+                      <>
+                        Your history.
+                        <br className="mobile-break" />{" "}
+                        <span className="muted-heading">Made recoverable.</span>
+                      </>
+                    ) : (
+                      title
+                    )}
+                  </h1>
+                  <p>
+                    {
+                      {
+                        overview:
+                          "Know what survived. Know why. Recover with evidence.",
+                        timeline:
+                          "Immutable captures. Real changes. A history built one chunk at a time.",
+                        frontier:
+                          "Every file version, every dependency, and the evidence behind its status.",
+                        lab: "Break a copy safely. Follow the impact through your real backup history.",
+                        restore:
+                          "Reconstruct into a fresh destination. Verify every byte before success.",
+                        evidence:
+                          "Checks you can inspect. Results you can reproduce.",
+                        settings:
+                          "Understand the boundaries of your backup and recovery model.",
+                      }[screen]
+                    }
+                  </p>
+                </div>
+                {screen === "overview" && (
+                  <button
+                    className="button primary"
+                    disabled={isBusy || scope === "lab"}
+                    title={
+                      scope === "lab"
+                        ? "Capture is only available on the original repository"
+                        : undefined
+                    }
+                    onClick={() =>
+                      void run(
+                        "Capturing snapshot",
+                        { action: "capture", label: captureLabel || undefined },
+                        { reset: true },
+                      )
+                    }
+                  >
+                    <Plus size={16} />
+                    Capture snapshot
+                  </button>
+                )}
+              </div>
+              {!!data.invalidMetadata.length && (
+                <div className="notice error">
+                  <TriangleAlert size={16} />
+                  <div>
+                    <strong>Storage metadata could not be fully trusted</strong>
+                    <p>{data.invalidMetadata.join(" · ")}</p>
+                  </div>
+                </div>
+              )}
+              {screen === "overview" && (
+                <>
+                  <section className="metrics" aria-label="Storage accounting">
+                    <div className="metric">
+                      <span>Logical history</span>
+                      <strong>{bytes(data.stats.logicalBytes)}</strong>
+                      <small>All captured file bytes</small>
+                    </div>
+                    <div className="metric">
+                      <span>Unique chunk data</span>
+                      <strong>{bytes(data.stats.uniqueBytes)}</strong>
+                      <small>
+                        {data.stats.chunks.toLocaleString()} content-addressed
+                        objects
+                      </small>
+                    </div>
+                    <div className="metric">
+                      <span>Deduplication savings</span>
+                      <strong>
+                        {(data.stats.dedupSavings * 100).toLocaleString(
+                          undefined,
+                          { maximumFractionDigits: 1 },
+                        )}
+                        <em>%</em>
+                      </strong>
+                      <small>Against naive full-copy history</small>
+                    </div>
+                    <div className="metric">
+                      <span>Physical storage</span>
+                      <strong>{bytes(data.stats.physicalBytes)}</strong>
+                      <small>
+                        Across both copies · metadata{" "}
+                        {bytes(data.stats.metadataBytes)}
+                      </small>
+                    </div>
+                  </section>
+                  <div className="overview-grid">
+                    <section className="panel recovery-summary">
+                      <div className="section-title">
+                        <div>
+                          <span className="eyebrow">RECOVERY FRONTIER</span>
+                          <h2>Prove it before you need it.</h2>
+                        </div>
+                        <button
+                          className="icon-button"
+                          aria-label="Open recovery frontier"
+                          onClick={() => navigate("frontier")}
+                        >
+                          <ArrowUpRight size={20} />
+                        </button>
+                      </div>
+                      <div className="recovery-summary-body">
+                        <div
+                          className="recovery-ring"
+                          style={
+                            {
+                              "--ratio": `${ratio * 100}%`,
+                            } as React.CSSProperties
+                          }
+                        >
+                          <div>
+                            <ShieldCheck size={21} />
+                            <strong>
+                              {totalVersions
+                                ? `${Math.round(ratio * 100)}%`
+                                : "—"}
+                            </strong>
+                            <span>verified versions</span>
+                          </div>
+                        </div>
+                        <div className="recovery-summary-details">
+                          <div className="latest-recovery">
+                            <span>Newest fully verified snapshot</span>
+                            <strong>
+                              {data.newestVerified
+                                ? short(data.newestVerified)
+                                : "Not established"}
+                            </strong>
+                            <p>
+                              {data.newestVerified
+                                ? "All required chunks had a verified accessible copy at scan time."
+                                : "Run deep verification to establish byte-level recoverability."}
+                            </p>
+                          </div>
+                          <div className="version-tally">
+                            <span className="good">
+                              <i />
+                              {verifiedVersions.toLocaleString()} verified
+                            </span>
+                            <span className="muted">
+                              of {totalVersions.toLocaleString()} file versions
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="panel-bottom">
+                        <Clock3 size={13} />
+                        <span>
+                          {data.scan
+                            ? `${data.scan.deep ? "Full-byte" : "Quick metadata"} scan · ${date(data.scan.at)} · ${data.scan.durationMs.toFixed(0)} ms`
+                            : "No health scan completed yet."}
+                        </span>
+                        <button
+                          className="text-button"
+                          disabled={isBusy}
+                          onClick={() =>
+                            void run("Deep verification", {
+                              action: "scan",
+                              scope,
+                              deep: true,
+                            })
+                          }
+                        >
+                          Verify now
+                          <ArrowRight size={13} />
+                        </button>
+                      </div>
+                    </section>
+                    <section className="panel replicas">
+                      <div className="section-title">
+                        <div>
+                          <span className="eyebrow">STORAGE COPIES</span>
+                          <h2>Two places. One history.</h2>
+                        </div>
+                        <HardDrive size={20} className="subtle" />
+                      </div>
+                      {data.repository?.roots.map((root, i) => (
+                        <div className="replica" key={root}>
+                          <span className="replica-letter">
+                            {String.fromCharCode(65 + i)}
+                          </span>
+                          <div>
+                            <strong>
+                              Backend {String.fromCharCode(65 + i)}
+                            </strong>
+                            <code title={root}>{root}</code>
+                          </div>
+                        </div>
+                      ))}
+                      <p className="storage-caveat">
+                        <TriangleAlert size={14} />
+                        Separate directories are logical copies. Physical disk
+                        independence is not established.
+                      </p>
+                    </section>
+                  </div>
+                  <section className="panel snapshots-panel">
+                    <div className="section-title">
+                      <div>
+                        <span className="eyebrow">RECENT HISTORY</span>
+                        <h2>Snapshots</h2>
+                      </div>
+                      <button
+                        className="text-button"
+                        onClick={() => navigate("timeline")}
+                      >
+                        Explore timeline
+                        <ArrowRight size={14} />
+                      </button>
+                    </div>
+                    {snapshots.length ? (
+                      <div className="table-scroll">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Snapshot</th>
+                              <th>Captured</th>
+                              <th>Files</th>
+                              <th>Logical size</th>
+                              <th>Recovery evidence</th>
+                              <th />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {snapshots.slice(0, 5).map((s, i) => (
+                              <tr
+                                key={s.id}
+                                onClick={() => {
+                                  changeSnapshot(s.id);
+                                  navigate("frontier");
+                                }}
+                              >
+                                <td>
+                                  <div className="snapshot-name">
+                                    <span className="timeline-node" />
+                                    <strong>
+                                      {s.label || `Snapshot ${short(s.id)}`}
+                                    </strong>
+                                    {i === 0 && (
+                                      <span className="tiny-tag">LATEST</span>
+                                    )}
+                                  </div>
+                                  <code className="subtle snapshot-digest">
+                                    {short(s.id)}
+                                  </code>
+                                </td>
+                                <td>{date(s.createdAt)}</td>
+                                <td className="mono">
+                                  {s.files.toLocaleString()}
+                                </td>
+                                <td className="mono">{bytes(s.bytes)}</td>
+                                <td>
+                                  <Status state={s.state} />
+                                  {!!s.degraded?.length && (
+                                    <div className="small warn">
+                                      {s.degraded.length} metadata warning(s)
+                                    </div>
+                                  )}
+                                </td>
+                                <td>
+                                  <button
+                                    className="icon-button"
+                                    aria-label={`Inspect ${s.label || short(s.id)}`}
+                                    onClick={() => {
+                                      changeSnapshot(s.id);
+                                      navigate("frontier");
+                                    }}
+                                  >
+                                    <ArrowUpRight size={16} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <Empty icon={History} title="Your history starts here">
+                        Capture the first snapshot to store your source files in
+                        both backends.
+                      </Empty>
+                    )}
+                  </section>
+                </>
+              )}
+              {screen === "timeline" && (
+                <>
+                  <div className="action-strip">
+                    <div className="field inline-field">
+                      <label htmlFor="snapshot-label">Capture label</label>
+                      <input
+                        id="snapshot-label"
+                        placeholder="Optional label for this capture"
+                        value={captureLabel}
+                        onChange={(e) => setCaptureLabel(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      className="button primary"
+                      disabled={isBusy || scope === "lab"}
+                      onClick={() =>
+                        void run(
+                          "Capturing snapshot",
+                          {
+                            action: "capture",
+                            label: captureLabel || undefined,
+                          },
+                          { reset: true },
+                        )
+                      }
+                    >
+                      <Plus size={15} />
+                      Capture snapshot
+                    </button>
+                    {data.repository?.isDemo && (
+                      <button
+                        className="button"
+                        disabled={isBusy || scope === "lab"}
+                        onClick={() =>
+                          void run(
+                            "Editing demo source",
+                            { action: "demo-edit" },
+                            {
+                              success:
+                                "Demo source changed. Capture a snapshot to record the new version.",
+                            },
+                          )
+                        }
+                      >
+                        <Zap size={14} />
+                        Edit demo source
+                      </button>
+                    )}
+                  </div>
+                  <p className="footnote">
+                    <CircleHelp size={13} />
+                    Live directory captures detect obvious file changes but do
+                    not provide an atomic filesystem view.
+                  </p>
+                  <div className="snapshot-strip">
+                    {snapshots.map((s, i) => (
+                      <button
+                        key={s.id}
+                        disabled={isBusy}
+                        className={`snapshot-tile ${activeId === s.id ? "active" : ""}`}
+                        onClick={() => changeSnapshot(s.id)}
+                      >
+                        <span className="tile-top">
+                          <History size={14} />
+                          <span>
+                            {i === 0
+                              ? "LATEST"
+                              : `HISTORY ${snapshots.length - i}`}
+                          </span>
+                          <Status state={s.state} compact />
+                        </span>
+                        <strong>{s.label || short(s.id)}</strong>
+                        <span>{date(s.createdAt)}</span>
+                        <code>{short(s.id)}</code>
+                        <small>
+                          {s.files} files · {bytes(s.bytes)}
+                        </small>
+                      </button>
+                    ))}
+                  </div>
+                  {active ? (
+                    <>
+                      <div className="section-title browser-heading">
+                        <div>
+                          <span className="eyebrow">SNAPSHOT CONTENTS</span>
+                          <h2>{active.label || short(active.id)}</h2>
+                        </div>
+                        <button
+                          className="button small-button"
+                          disabled={
+                            isBusy ||
+                            snapshots.length < 2 ||
+                            snapshots.findIndex((s) => s.id === activeId) >=
+                              snapshots.length - 1
+                          }
+                          onClick={() => {
+                            const index = snapshots.findIndex(
+                              (s) => s.id === activeId,
+                            );
+                            const prior = snapshots[index + 1];
+                            if (prior)
+                              void query<Diff>(
+                                "Comparing snapshots",
+                                {
+                                  action: "diff",
+                                  scope,
+                                  before: prior.id,
+                                  after: activeId,
+                                },
+                                setDiff,
+                              );
+                          }}
+                        >
+                          <GitBranch size={14} />
+                          Compare with previous
+                        </button>
+                      </div>
+                      {diff && (
+                        <section className="diff-results">
+                          <div className="diff-heading">
+                            <h3>File-level changes</h3>
+                            <button
+                              className="icon-button"
+                              aria-label="Close diff"
+                              onClick={() => setDiff(undefined)}
+                            >
+                              <X size={15} />
+                            </button>
+                          </div>
+                          <div className="diff-columns">
+                            {(["added", "changed", "removed"] as const).map(
+                              (kind) => (
+                                <div key={kind}>
+                                  <h4
+                                    className={
+                                      kind === "added"
+                                        ? "good"
+                                        : kind === "removed"
+                                          ? "bad"
+                                          : "warn"
+                                    }
+                                  >
+                                    {kind} <span>{diff[kind].length}</span>
+                                  </h4>
+                                  {diff[kind].slice(0, 100).map((path) => (
+                                    <code className="break" key={path}>
+                                      {path}
+                                    </code>
+                                  ))}
+                                  {diff[kind].length > 100 && (
+                                    <span className="small muted">
+                                      Showing first 100 paths
+                                    </span>
+                                  )}
+                                </div>
+                              ),
+                            )}
+                          </div>
+                          <p className="footnote">
+                            Compared file metadata and content digests;
+                            line-by-line text diff is not provided.
+                          </p>
+                        </section>
+                      )}
+                      <div className="browser-layout">
+                        <section className="panel browser-panel">
+                          {fileTable()}
+                        </section>
+                        {inspector()}
+                      </div>
+                    </>
+                  ) : (
+                    <Empty icon={History} title="No snapshots captured">
+                      Capture your first snapshot from the original repository.
+                    </Empty>
+                  )}
+                </>
+              )}
+              {screen === "frontier" && (
+                <>
+                  <RecoverySuggestion
+                    recommendation={
+                      recommendation?.scope === scope &&
+                      recommendation.repositoryId === data.repository?.id &&
+                      recommendation.scan.id === data.scan?.id
+                        ? recommendation
+                        : undefined
+                    }
+                    snapshots={snapshots}
+                    busy={isBusy}
+                    onAnalyze={() =>
+                      void query<RecoveryRecommendation>(
+                        "Analyzing recovery options",
+                        { action: "plan-recovery", scope },
+                        setRecommendation,
+                      )
+                    }
+                    onSelect={changeSnapshot}
+                  />
+                  <div className="frontier-toolbar">
+                    <SnapshotSelect
+                      snapshots={snapshots}
+                      value={activeId}
+                      onChange={changeSnapshot}
+                      disabled={isBusy}
+                    />
+                    <div className="toolbar-right">
+                      <button
+                        className="button small-button"
+                        disabled={isBusy}
+                        onClick={() =>
+                          void run("Quick metadata analysis", {
+                            action: "scan",
+                            scope,
+                            deep: false,
+                          })
+                        }
+                      >
+                        <Search size={14} />
+                        Quick analysis
+                      </button>
+                      <button
+                        className="button primary small-button"
+                        disabled={isBusy}
+                        onClick={() =>
+                          void run("Deep verification", {
+                            action: "scan",
+                            scope,
+                            deep: true,
+                          })
+                        }
+                      >
+                        <ShieldCheck size={14} />
+                        Verify full bytes
+                      </button>
+                    </div>
+                  </div>
+                  <div className="legend">
+                    {stateKeys.map((key) => (
+                      <span key={key}>
+                        <Status state={key} />
+                      </span>
+                    ))}
+                  </div>
+                  <p className="footnote">
+                    Verified means readable and hash-checked under the latest
+                    scan. Unknown preserves the possibility of an inaccessible
+                    copy. Every scan is a point-in-time observation.
+                  </p>
+                  {active ? (
+                    <>
+                      <div className="snapshot-evidence">
+                        <div>
+                          <span className="eyebrow">SELECTED SNAPSHOT</span>
+                          <strong>{active.label || short(active.id)}</strong>
+                        </div>
+                        <Status state={active.state} />
+                        <div className="state-counts">
+                          {stateKeys
+                            .filter((key) => (active.counts?.[key] ?? 0) > 0)
+                            .map((key) => (
+                              <span className={statusInfo[key].color} key={key}>
+                                {active.counts?.[key]}{" "}
+                                {statusInfo[key].short.toLowerCase()}
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+                      <div className="browser-layout">
+                        <section className="panel browser-panel">
+                          {fileTable()}
+                        </section>
+                        {inspector()}
+                      </div>
+                    </>
+                  ) : (
+                    <Empty icon={GitBranch} title="No recovery frontier yet">
+                      Capture a snapshot to establish file-version dependencies.
+                    </Empty>
+                  )}
+                </>
+              )}
+              {screen === "lab" && (
+                <Laboratory
+                  seed={seed}
+                  setSeed={setSeed}
+                  run={run}
+                  isBusy={isBusy}
+                  snapshots={snapshots}
+                  data={data}
+                  scope={scope}
+                  query={query}
+                  faultKind={faultKind}
+                  setFaultKind={setFaultKind}
+                  faultBackend={faultBackend}
+                  setFaultBackend={setFaultBackend}
+                  faultHash={faultHash}
+                  setFaultHash={setFaultHash}
+                  changeScope={changeScope}
+                  navigate={navigate}
+                  totalVersions={totalVersions}
+                  budget={budget}
+                  setBudget={setBudget}
+                  plan={plan}
+                  setPlan={setPlan}
+                />
+              )}
+              {screen === "restore" && (
+                <>
+                  <div className="restore-layout">
+                    <section className="panel restore-config">
+                      <div className="section-title">
+                        <div>
+                          <span className="eyebrow">
+                            01 / CHOOSE YOUR HISTORY
+                          </span>
+                          <h2>Restore with evidence.</h2>
+                        </div>
+                        <ArrowDownToLine size={22} />
+                      </div>
+                      <label className="field">
+                        Snapshot
+                        <SnapshotSelect
+                          snapshots={snapshots}
+                          value={activeId}
+                          onChange={changeSnapshot}
                           disabled={isBusy}
                         />
                       </label>

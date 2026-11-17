@@ -1,0 +1,37 @@
+{
+  "date": "2026-11-12T02:00:33.051831Z",
+  "host": "macOS arm64, Node 22.23.2, Electron 45.2.3",
+  "freshInstall": true,
+  "staticChecks": [
+    "typecheck",
+    "lint",
+    "format:check"
+  ],
+  "unitTests": 17,
+  "integrationServiceAndCrashTests": 59,
+  "totalTests": 76,
+  "productionBuild": true,
+  "dependencyAuditAdvisories": 0,
+  "evaluationSuccess": true,
+  "oracleAgreements": 288,
+  "oracleComparisons": 288,
+  "falsePositiveRecoverability": 0,
+  "independentlyRestoredBenchmarkFiles": 10023,
+  "uiSmoke": true,
+  "macPackage": true,
+  "packagedHelperRestoreFiles": 97,
+  "relocatedPackagedApp": {
+    "launchOutsideSourceTree": true,
+    "nativePickerRestore": true,
+    "independentOutputVerification": true,
+    "files": 97,
+    "bytes": 2680008,
+    "matchesGeneratedSourceBytes": true
+  },
+  "limits": [
+    "Validation executed on macOS arm64; external Linux CI and Windows execution are not claimed.",
+    "Unsigned/unnotarized macOS package.",
+    "Finite test and fault coverage; no proof that all possible defects are absent.",
+    "Live sources are not atomic snapshots; hostile ancestor-directory races remain outside the documented failure model."
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "date": "2026-11-11T22:22:04.702Z",
+  "command": "npm run test:ui",
+  "success": true,
+  "durationMs": 15829,
+  "checks": [
+    "Renderer has no Node require",
+    "UI creates three real snapshots and scans their bytes",
+    "Lab corruption is detected and healthy alternate copy preserves recovery",
+    "Original data stays healthy",
+    "Recovery frontier renders historical file-version evidence",
+    "Recovery suggestion shows a verified complete snapshot, bounded salvage rows, warning and snapshot selection",
+    "Recovery suggestion fits desktop and 800px layouts",
+    "Scope switch clears recovery suggestion",
+    "Main denies filesystem paths without native picker grants"
+  ],
+  "limitations": [
+    "Native file picker restore is tested separately through macOS computer-use; not mocked by this script."
+  ]
+}

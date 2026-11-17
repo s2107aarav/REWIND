@@ -1,3 +1,4 @@
+import { z } from "zod";
 import * as fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -48,6 +49,45 @@ interface InternalLab {
   scenario: Scenario;
   repo: Repository;
 }
+const scenarioSchema = z
+  .object({
+    version: z.literal(1),
+    id: z.string().uuid(),
+    repositoryId: z.string().uuid(),
+    seed: z.number().int().min(1).max(0xffffffff),
+    manifestVersion: z.literal(1),
+    snapshotIds: z.array(digest).optional(),
+    actions: z.array(
+      z
+        .object({
+          kind: z.enum([
+            "missing",
+            "corrupt",
+            "unavailable",
+            "io-error",
+            "manifest",
+          ]),
+          backend: z.number().int().min(0).max(1),
+          hash: digest.optional(),
+          status: z.literal("APPLIED"),
+        })
+        .strict()
+        .refine(
+          (a) =>
+            !["missing", "corrupt", "manifest"].includes(a.kind) ||
+            a.hash !== undefined,
+          "Destructive fault requires a digest",
+        ),
+    ),
+  })
+  .strict();
+const markerSchema = z
+  .object({
+    version: z.literal(1),
+    id: z.string().uuid(),
+    nonce: z.string().uuid(),
+  })
+  .strict();
 const capabilities = new WeakMap<LabHandle, InternalLab>();
 function rng(seed: number) {
   let x = seed >>> 0;
@@ -89,54 +129,56 @@ export async function createFaultLab(
   managedRoot: string,
   seed = 42,
 ): Promise<LabHandle> {
-  if (!Number.isInteger(seed) || seed < 1 || seed > 0xffffffff)
-    throw new Error("Seed must be 1..4294967295");
-  const managed = await noSymlinks(managedRoot, true);
-  await assertSeparate([
-    managed,
-    repo.home,
-    repo.config.source,
-    ...repo.config.roots,
-  ]);
-  await fs.mkdir(managed, { recursive: true, mode: 0o700 });
-  const id = randomUUID(),
-    home = path.join(managed, id),
-    nonce = randomUUID();
-  await fs.mkdir(home, { mode: 0o700 });
-  for (let b = 0; b < 2; b++)
-    await physicalCopy(
-      repo.config.roots[b],
-      path.join(home, b ? "backend-b" : "backend-a"),
+  return withLock(repo.home, async () => {
+    if (!Number.isInteger(seed) || seed < 1 || seed > 0xffffffff)
+      throw new Error("Seed must be 1..4294967295");
+    const managed = await noSymlinks(managedRoot, true);
+    await assertSeparate([
+      managed,
+      repo.home,
+      repo.config.source,
+      ...repo.config.roots,
+    ]);
+    await fs.mkdir(managed, { recursive: true, mode: 0o700 });
+    const id = randomUUID(),
+      home = path.join(managed, id),
+      nonce = randomUUID();
+    await fs.mkdir(home, { mode: 0o700 });
+    for (let b = 0; b < 2; b++)
+      await physicalCopy(
+        repo.config.roots[b],
+        path.join(home, b ? "backend-b" : "backend-a"),
+      );
+    const catalog = path.join(home, "catalog");
+    await fs.mkdir(catalog);
+    for (const dir of ["receipts", "restore-intents"])
+      await fs.mkdir(path.join(catalog, dir));
+    const config = {
+      ...repo.config,
+      roots: [path.join(home, "backend-a"), path.join(home, "backend-b")],
+    };
+    await atomicWrite(path.join(catalog, "repository.json"), canonical(config));
+    const scenario: Scenario = {
+      version: 1,
+      id,
+      repositoryId: repo.config.id,
+      seed,
+      manifestVersion: 1,
+      snapshotIds: (await listSnapshots(repo)).map((s) => s.id).sort(),
+      actions: [],
+    };
+    await atomicWrite(
+      path.join(home, "lab-capability.json"),
+      canonical({ version: 1, id, nonce }),
     );
-  const catalog = path.join(home, "catalog");
-  await fs.mkdir(catalog);
-  for (const dir of ["receipts", "restore-intents"])
-    await fs.mkdir(path.join(catalog, dir));
-  const config = {
-    ...repo.config,
-    roots: [path.join(home, "backend-a"), path.join(home, "backend-b")],
-  };
-  await atomicWrite(path.join(catalog, "repository.json"), canonical(config));
-  const scenario: Scenario = {
-    version: 1,
-    id,
-    repositoryId: repo.config.id,
-    seed,
-    manifestVersion: 1,
-    snapshotIds: (await listSnapshots(repo)).map((s) => s.id).sort(),
-    actions: [],
-  };
-  await atomicWrite(
-    path.join(home, "lab-capability.json"),
-    canonical({ version: 1, id, nonce }),
-  );
-  await atomicWrite(path.join(home, "scenario.json"), canonical(scenario));
-  return handle({
-    home,
-    managed,
-    nonce,
-    scenario,
-    repo: await openRepository(catalog),
+    await atomicWrite(path.join(home, "scenario.json"), canonical(scenario));
+    return handle({
+      home,
+      managed,
+      nonce,
+      scenario,
+      repo: await openRepository(catalog),
+    });
   });
 }
 export async function openFaultLab(managedRoot: string, id: string) {
@@ -145,21 +187,27 @@ export async function openFaultLab(managedRoot: string, id: string) {
     home = await noSymlinks(path.join(managed, id));
   if (!contains(managed, home) || home === managed)
     throw new Error("Invalid lab containment");
-  const marker = JSON.parse(
-    (
-      await readBounded(path.join(home, "lab-capability.json"), 2048)
-    ).toString(),
+  const marker = markerSchema.parse(
+    JSON.parse(
+      (
+        await readBounded(path.join(home, "lab-capability.json"), 2048)
+      ).toString(),
+    ),
   );
   if (marker.version !== 1 || marker.id !== id)
     throw new Error("Invalid lab marker");
-  const scenario = JSON.parse(
-    (
-      await readBounded(path.join(home, "scenario.json"), 1024 * 1024)
-    ).toString(),
-  ) as Scenario;
+  const scenario = scenarioSchema.parse(
+    JSON.parse(
+      (
+        await readBounded(path.join(home, "scenario.json"), 1024 * 1024)
+      ).toString(),
+    ),
+  );
   if (scenario.version !== 1 || scenario.id !== id)
     throw new Error("Invalid lab scenario");
   const repo = await openRepository(path.join(home, "catalog"));
+  if (scenario.repositoryId !== repo.config.id)
+    throw new Error("Lab scenario repository mismatch");
   const internal = { home, managed, nonce: marker.nonce, scenario, repo };
   for (const a of scenario.actions) {
     if (a.kind === "unavailable") (repo.disabled ??= new Set()).add(a.backend);
@@ -177,10 +225,12 @@ async function checked(value: LabHandle) {
     managed = await noSymlinks(c.managed);
   if (home !== c.home || !contains(managed, home) || home === managed)
     throw new Error("Lab path escape rejected");
-  const marker = JSON.parse(
-    (
-      await readBounded(path.join(home, "lab-capability.json"), 2048)
-    ).toString(),
+  const marker = markerSchema.parse(
+    JSON.parse(
+      (
+        await readBounded(path.join(home, "lab-capability.json"), 2048)
+      ).toString(),
+    ),
   );
   if (marker.nonce !== c.nonce || marker.id !== value.id)
     throw new Error("Lab capability changed");
@@ -193,6 +243,7 @@ async function checked(value: LabHandle) {
 }
 export async function labRepository(value: LabHandle): Promise<Repository> {
   const c = await checked(value);
+  await refreshScenario(c);
   return {
     ...c.repo,
     config: { ...c.repo.config, roots: [...c.repo.config.roots] },
@@ -200,8 +251,35 @@ export async function labRepository(value: LabHandle): Promise<Repository> {
     ioErrors: new Set(c.repo.ioErrors),
   };
 }
+async function refreshScenario(c: InternalLab) {
+  const scenario = scenarioSchema.parse(
+    JSON.parse(
+      (
+        await readBounded(path.join(c.home, "scenario.json"), 1024 * 1024)
+      ).toString(),
+    ),
+  );
+  if (
+    scenario.version !== 1 ||
+    scenario.id !== c.scenario.id ||
+    scenario.repositoryId !== c.repo.config.id ||
+    !Array.isArray(scenario.actions)
+  )
+    throw new Error("Invalid lab scenario");
+  c.scenario = scenario;
+  c.repo.disabled = new Set(
+    scenario.actions
+      .filter((a) => a.kind === "unavailable")
+      .map((a) => a.backend),
+  );
+  c.repo.ioErrors = new Set(
+    scenario.actions.filter((a) => a.kind === "io-error").map((a) => a.backend),
+  );
+}
 export async function scenarioRecord(value: LabHandle) {
-  return structuredClone((await checked(value)).scenario);
+  const c = await checked(value);
+  await refreshScenario(c);
+  return structuredClone(c.scenario);
 }
 export async function injectFault(
   value: LabHandle,
@@ -218,17 +296,10 @@ export async function injectFault(
   )
     throw new Error("Invalid fault operation");
   return withLock(c.home, async () => {
-    // Reload under the lock so reopened handles share the same persisted action index.
-    c.scenario = JSON.parse(
-      (
-        await readBounded(path.join(c.home, "scenario.json"), 1024 * 1024)
-      ).toString(),
-    ) as Scenario;
-    for (const a of c.scenario.actions) {
-      if (a.kind === "unavailable")
-        (c.repo.disabled ??= new Set()).add(a.backend);
-      if (a.kind === "io-error") (c.repo.ioErrors ??= new Set()).add(a.backend);
-    }
+    // Reopened handles share persisted action indexes and availability state.
+    await refreshScenario(c);
+    if (Buffer.byteLength(canonical(c.scenario)) + 256 > 1024 * 1024)
+      throw new Error("Laboratory scenario is full; create a new lab");
     let hash = selectedHash;
     if (hash !== undefined) digest.parse(hash);
     const snapshots = await listSnapshots(c.repo);
@@ -321,6 +392,7 @@ export async function replayScenario(
   managed: string,
   scenario: Scenario,
 ) {
+  scenario = scenarioSchema.parse(scenario);
   if (scenario.version !== 1 || scenario.repositoryId !== repo.config.id)
     throw new Error("Scenario repository/version mismatch");
   const current = (await listSnapshots(repo)).map((s) => s.id).sort();

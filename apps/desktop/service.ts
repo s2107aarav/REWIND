@@ -29,6 +29,7 @@ import {
   planRepair,
   rebuildCatalog,
   replayScenario,
+  readReceipt,
   restoreSnapshot,
   scanHealth,
   scenarioRecord,
@@ -38,6 +39,7 @@ import {
 } from "../../packages/core/index.js";
 import {
   atomicWrite,
+  checkCancelled,
   exists,
   noSymlinks,
   readBounded,
@@ -129,17 +131,28 @@ export class DesktopService {
     const { storageAccounting } = await import(
       "../../packages/core/repository.js"
     );
+    const metadataWarnings: string[] = [];
+    const names = async (r: Repository, directory: string) => {
+      const p = path.join(r.home, directory);
+      try {
+        await noSymlinks(p);
+        return await fs.readdir(p);
+      } catch (e) {
+        metadataWarnings.push(
+          "Cannot read " + directory + ": " + (e as Error).message,
+        );
+        return [];
+      }
+    };
     const receipts: ReceiptSummary[] = [];
     for (const r of [
       this.original,
       ...(this.lab ? [await this.repo("lab")] : []),
     ])
-      for (const name of await fs.readdir(path.join(r.home, "receipts"))) {
+      for (const name of await names(r, "receipts")) {
         if (!/^[a-f0-9-]{36}\.json$/.test(name)) continue;
         try {
-          const v = JSON.parse(
-            (await readBounded(path.join(r.home, "receipts", name))).toString(),
-          );
+          const v = await readReceipt(r, name.slice(0, -5));
           receipts.push({
             id: v.id,
             destination: v.destination,
@@ -150,7 +163,7 @@ export class DesktopService {
             createdAt: v.createdAt,
           });
         } catch {
-          /* invalid receipt is not a success */
+          metadataWarnings.push("Invalid recovery receipt: " + name);
         }
       }
     const interrupted: string[] = [];
@@ -158,7 +171,7 @@ export class DesktopService {
       this.original,
       ...(this.lab ? [await this.repo("lab")] : []),
     ])
-      for (const name of await fs.readdir(path.join(r.home, "restore-intents")))
+      for (const name of await names(r, "restore-intents"))
         if (/^[a-f0-9-]{36}\.json$/.test(name))
           interrupted.push(
             "Interrupted restore intent " +
@@ -194,6 +207,7 @@ export class DesktopService {
           /* absent evidence */
         }
       }
+    const accounting = await storageAccounting(repo);
     return {
       ...empty,
       ready: true,
@@ -207,7 +221,7 @@ export class DesktopService {
       snapshots,
       ...page,
       offset,
-      stats: await storageAccounting(repo),
+      stats: accounting,
       scan: scan
         ? {
             id: scan.id,
@@ -221,6 +235,8 @@ export class DesktopService {
       receipts: receipts.sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
       warnings: [
         ...interrupted,
+        ...accounting.warnings,
+        ...metadataWarnings,
         "Two directories on one disk do not protect against disk failure.",
         "Live capture is not a globally atomic filesystem snapshot.",
         "Health evidence describes scan time; restore verifies bytes again.",
@@ -241,6 +257,7 @@ export class DesktopService {
   }
   async request(raw: Request, signal?: AbortSignal): Promise<unknown> {
     const request = requestSchema.parse(raw);
+    checkCancelled({ signal });
     const options: OperationOptions = { signal, onProgress: this.progress };
     switch (request.action) {
       case "state":
@@ -383,11 +400,7 @@ export class DesktopService {
   async output(id: string) {
     if (!/^[a-f0-9-]{36}$/.test(id)) throw new Error("Invalid receipt id");
     const r = await this.receiptRepository(id);
-    const receipt = JSON.parse(
-      (
-        await readBounded(path.join(r.home, "receipts", id + ".json"))
-      ).toString(),
-    );
+    const receipt = await readReceipt(r, id);
     return receipt.destination as string;
   }
 }

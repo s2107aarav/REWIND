@@ -107,6 +107,7 @@ export function Laboratory({
               aria-label="Scenario seed"
               type="number"
               min="1"
+              max="4294967295"
               step="1"
               value={seed}
               onChange={(e) => setSeed(Number(e.target.value))}
@@ -118,7 +119,8 @@ export function Laboratory({
               isBusy ||
               !snapshots.length ||
               !Number.isSafeInteger(seed) ||
-              seed < 1
+              seed < 1 ||
+              seed > 4294967295
             }
             onClick={() =>
               void run(
@@ -254,7 +256,9 @@ export function Laboratory({
                   disabled={
                     isBusy ||
                     scope !== "lab" ||
-                    (!!faultHash && !/^[a-f0-9]{64}$/.test(faultHash))
+                    ((faultKind === "corrupt" || faultKind === "missing") &&
+                      !!faultHash &&
+                      !/^[a-f0-9]{64}$/.test(faultHash))
                   }
                   title={
                     scope !== "lab"
@@ -268,7 +272,10 @@ export function Laboratory({
                         action: "fault",
                         kind: faultKind,
                         backend: faultBackend,
-                        hash: faultHash || undefined,
+                        hash:
+                          faultKind === "corrupt" || faultKind === "missing"
+                            ? faultHash || undefined
+                            : undefined,
                       },
                       {
                         scope: "lab",
@@ -395,7 +402,7 @@ export function Laboratory({
             disabled={
               isBusy ||
               !data.scan?.deep ||
-              !Number.isFinite(Number(budget)) ||
+              !Number.isSafeInteger(Number(budget)) ||
               Number(budget) < 0
             }
             title={!data.scan?.deep ? "Run deep verification first" : undefined}

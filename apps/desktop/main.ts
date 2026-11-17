@@ -11,6 +11,7 @@ if (process.env.REWIND_HOME)
 const base = __dirname;
 let window: BrowserWindow;
 let worker: Worker;
+let workerFailure: Error | undefined;
 let sequence = 0;
 const pending = new Map<
   number,
@@ -19,9 +20,18 @@ const pending = new Map<
 const grants = new Set<string>();
 function call(message: Record<string, unknown>): Promise<unknown> {
   return new Promise((resolve, reject) => {
+    if (workerFailure) {
+      reject(workerFailure);
+      return;
+    }
     const id = ++sequence;
     pending.set(id, { resolve, reject });
-    worker.postMessage({ id, ...message });
+    try {
+      worker.postMessage({ id, ...message });
+    } catch (e) {
+      pending.delete(id);
+      reject(e instanceof Error ? e : new Error(String(e)));
+    }
   });
 }
 function trusted(event: Electron.IpcMainInvokeEvent) {
@@ -38,6 +48,7 @@ app.whenReady().then(async () => {
   session.defaultSession.setPermissionCheckHandler(() => false);
   worker = new Worker(path.join(base, "worker.cjs"), {
     workerData: {
+      resourcesPath: app.isPackaged ? process.resourcesPath : undefined,
       evidenceFile: app.isPackaged
         ? path.join(base, "evaluation.json")
         : path.join(app.getAppPath(), "results", "summary.json"),
@@ -50,7 +61,8 @@ app.whenReady().then(async () => {
   });
   worker.on("message", (m) => {
     if (m.progress) {
-      window?.webContents.send("rewind:progress", m.progress);
+      if (window && !window.isDestroyed())
+        window.webContents.send("rewind:progress", m.progress);
       return;
     }
     const p = pending.get(m.id);
@@ -61,15 +73,14 @@ app.whenReady().then(async () => {
     }
   });
   worker.on("exit", (code) => {
-    for (const p of pending.values())
-      p.reject(
-        new Error(
-          "Storage worker stopped (code " + code + "). Restart REWIND.",
-        ),
-      );
+    workerFailure ??= new Error(
+      "Storage worker stopped (code " + code + "). Restart REWIND.",
+    );
+    for (const p of pending.values()) p.reject(workerFailure);
     pending.clear();
   });
   worker.on("error", (e) => {
+    workerFailure = e;
     for (const p of pending.values()) p.reject(e);
     pending.clear();
   });

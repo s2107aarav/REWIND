@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-12T02:01:06.125Z",
+  "command": "npm run package && npm run test:package",
+  "success": true,
+  "packagedBinarySha256": "e665753063d53ba4002246587f561fce0d459025e0ea40860a0875dba64e4ab3",
+  "files": 97,
+  "bytes": 2680008,
+  "nativeExclusivePublication": true,
+  "receiptVerified": true,
+  "conditions": "Production core under Node with resourcesPath pointed at actual packaged helper. Fresh generated three-snapshot fixture; no mock reads or mutation responses. Electron app launch and native picker are separate UI checks."
+}

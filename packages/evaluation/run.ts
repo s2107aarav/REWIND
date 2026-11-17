@@ -2,7 +2,7 @@ import * as fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { isDeepStrictEqual } from "node:util";
-import { randomUUID, createHash } from "node:crypto";
+import { createHash } from "node:crypto";
 import {
   objectPath,
   scenarioRecord,
@@ -28,8 +28,9 @@ import {
 } from "../core/index.js";
 import { oracle } from "./oracle.js";
 const seed = 2409,
-  root = path.resolve(".rewind/evaluation", randomUUID());
-await fs.mkdir(root, { recursive: true });
+  root = await fs.mkdtemp(
+    path.join(await fs.realpath(os.tmpdir()), "rewind-evaluation-"),
+  );
 const started = new Date().toISOString();
 const timings: Record<string, number> = {};
 async function measured<T>(name: string, work: () => Promise<T>) {
@@ -277,7 +278,7 @@ const report = {
     cores: os.cpus().length,
     memoryBytes: os.totalmem(),
     filesystem:
-      "Local workspace under iCloud Drive; warm OS cache; two directories on same volume; no independent disk fault domains",
+      "Local temporary directory; warm OS cache; two directories on same volume; no independent disk fault domains",
   },
   scope: {
     snapshots: 2,

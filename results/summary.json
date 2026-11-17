@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "date": "2026-11-12T01:53:03.317Z",
+  "finishedAt": "2026-11-12T01:55:57.589Z",
+  "command": "npm run evaluate",
+  "seed": 2409,
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v22.23.2",
+    "os": "25.3.0",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "memoryBytes": 8589934592,
+    "filesystem": "Local temporary directory; warm OS cache; two directories on same volume; no independent disk fault domains"
+  },
+  "scope": {
+    "snapshots": 2,
+    "filesPerSnapshot": 10023,
+    "largeFileBytes": 8388608,
+    "oracleScenarios": 32,
+    "oracleFileComparisons": 288,
+    "regressionSeeds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32
+    ]
+  },
+  "oracle": {
+    "agreements": 288,
+    "comparisons": 288,
+    "falsePositives": 0,
+    "rejectedFaultRequests": 9,
+    "failures": []
+  },
+  "storage": {
+    "logicalBytes": 35014208,
+    "uniqueBytes": 8522139,
+    "physicalBytes": 27986134,
+    "metadataBytes": 10941856,
+    "objectBytes": 17044278,
+    "chunks": 420,
+    "dedupSavings": 0.7566091170761309,
+    "warnings": [],
+    "naiveBaseline": "sum of logical file bytes across both snapshots, one copy",
+    "singleCopySavings": 0.7566091170761309,
+    "replicatedObjectBytes": 17044278,
+    "replicatedVsTwoCopyNaiveSavings": 0.7566091170761309
+  },
+  "timings": {
+    "oracleScenariosMs": 8914.28975,
+    "captureS1Ms": 17111.001708,
+    "captureS2Ms": 7499.987957999998,
+    "deepScanMs": 1667.6495839999989,
+    "fullFrontierMs": 60.681375000000116,
+    "page10000Ms": 30.88604099999793,
+    "incrementalImpactMs": 527.1925830000037,
+    "restoreMs": 130144.919666,
+    "independentVerifyMs": 3857.659500000009
+  },
+  "throughput": {
+    "captureS1MiBPerSecond": 0.9757510186557781,
+    "restoreMiBPerSecond": 0.1282883233164444
+  },
+  "resources": {
+    "maxRssKiB": 296304,
+    "userCpuMicros": 29947973,
+    "systemCpuMicros": 27173240
+  },
+  "impact": {
+    "digest": "10b3a2e0f07b05bbaf38893f5c651b48ec9cd873afa766ee657d99f414b6b6a7",
+    "affectedVersions": 4
+  },
+  "restore": {
+    "valid": true,
+    "files": 10023,
+    "bytes": 17507102
+  },
+  "repair": {
+    "exactUtility": 3,
+    "popularityUtility": 0,
+    "budget": 5,
+    "unit": "synthetic cost units"
+  },
+  "limitations": [
+    "One macOS host, warm caches; measurements are not universal speed claims.",
+    "Oracle cases are small generated instances and finite randomized seeds.",
+    "Incremental timing is reverse-index reclassification after a completed scan, not incremental physical scanning.",
+    "Storage metadata bytes include backend manifests/commits; SQLite and filesystem allocation overhead are excluded.",
+    "maxRSS is process peak including fixture generation; not isolated operation peak."
+  ],
+  "success": true
+}

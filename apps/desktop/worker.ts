@@ -1,6 +1,13 @@
 import { parentPort, workerData } from "node:worker_threads";
 import { DesktopService } from "./service.js";
 import type { Request } from "./api.js";
+if (
+  workerData.resourcesPath &&
+  !(process as NodeJS.Process & { resourcesPath?: string }).resourcesPath
+)
+  Object.defineProperty(process, "resourcesPath", {
+    value: workerData.resourcesPath,
+  });
 const port = parentPort!;
 let controller: AbortController | undefined;
 let queued = 0,

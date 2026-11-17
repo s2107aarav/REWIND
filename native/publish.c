@@ -8,13 +8,20 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/file.h>
 #ifdef __linux__
 #include <sys/syscall.h>
 #include <linux/fs.h>
 #endif
 
-/* Narrow helper: publish one directory without replacing any destination. */
+/* Locks belong to the inherited open file description until its owner closes it. */
 int main(int argc, char **argv) {
+    if (argc == 2 && strcmp(argv[1], "--lock") == 0) {
+        if (flock(3, LOCK_EX | LOCK_NB) == 0) return 0;
+        int failure = errno;
+        fprintf(stderr, "%s\n", strerror(failure));
+        return (failure == EWOULDBLOCK || failure == EAGAIN) ? 4 : 1;
+    }
     if (argc != 3) { fprintf(stderr, "Expected stage and destination\n"); return 2; }
 #ifdef __APPLE__
     int result = renameatx_np(AT_FDCWD, argv[1], AT_FDCWD, argv[2], RENAME_EXCL);
